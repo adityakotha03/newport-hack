@@ -98,20 +98,26 @@ def _clip_duration(path: Path) -> float:
 # ---------------------------------------------------------------------------
 def _image_prompt(brand_name: str, brand_desc: str, opp: Opportunity) -> str:
     return (
-        f"Edit this video frame to seamlessly insert the product "
-        f"'{opp.product_to_insert}' from the brand '{brand_name}'. {opp.integration_idea}. "
-        f"Brand context: {brand_desc}. Match the scene's lighting, perspective, shadows and "
-        f"color so the product looks like it was really there. Keep everything else identical. "
-        f"Return the edited photo."
+        "You are a world-class professional photo retoucher specializing in photorealistic "
+        "product placement for advertising. Edit this photograph to naturally place the product "
+        f"'{opp.product_to_insert}' from the brand '{brand_name}' into the scene. "
+        f"Placement: {opp.integration_idea}. Brand context: {brand_desc}. "
+        "Requirements: the product must be photorealistic, accurately branded, and realistically "
+        "scaled for its surroundings; perspective, lighting direction, shadows, reflections, depth "
+        "of field and color grading must exactly match the scene so it looks like it was physically "
+        "there when the photo was taken — never pasted on. Do NOT change anything else: keep the "
+        "people, poses, background, framing and style identical. Output only the final edited photograph."
     )
 
 
 def _video_prompt(brand_name: str, brand_desc: str, opp: Opportunity) -> str:
     return (
-        f"Seamlessly add the product '{opp.product_to_insert}' from the brand '{brand_name}' "
-        f"into this video. {opp.integration_idea}. Brand context: {brand_desc}. Match the "
-        f"scene's lighting, perspective, motion and color so it looks like it was always there. "
-        f"Keep the original scene, people and actions unchanged."
+        "You are a world-class VFX compositor doing photorealistic product placement. Seamlessly "
+        f"integrate the product '{opp.product_to_insert}' from the brand '{brand_name}' into this "
+        f"video. Placement: {opp.integration_idea}. Brand context: {brand_desc}. The product must be "
+        "realistically scaled and branded, with perspective, motion, lighting, shadows and color "
+        "grading that match the footage so it looks like it was filmed there. Keep the original "
+        "scene, people and actions completely unchanged."
     )
 
 
@@ -187,6 +193,21 @@ def _replicate_bytes(output) -> Optional[bytes]:
     return None
 
 
+def _upload_public(path: Path) -> str:
+    """Upload a file to a public temp host and return a direct, extension-bearing URL."""
+    import requests
+
+    r = requests.post(
+        "https://tmpfiles.org/api/v1/upload",
+        files={"file": open(path, "rb")},
+        timeout=180,
+    )
+    r.raise_for_status()
+    url = r.json()["data"]["url"]
+    # convert the viewer URL to the direct-download URL (keeps the .mp4 suffix)
+    return url.replace("tmpfiles.org/", "tmpfiles.org/dl/")
+
+
 def _try_replicate_v2v(before: Path, brand_name: str, brand_desc: str,
                        opp: Opportunity, out_path: Path) -> bool:
     """Edit the clip with a Replicate video-to-video model. Returns True on success."""
@@ -197,19 +218,22 @@ def _try_replicate_v2v(before: Path, brand_name: str, brand_desc: str,
 
     prompt = _video_prompt(brand_name, brand_desc, opp)
     duration = min(10, max(3, round(_clip_duration(before))))
-    with open(before, "rb") as fh:
-        output = replicate.run(
-            config.REPLICATE_VIDEO_MODEL,
-            input={
-                "prompt": prompt,
-                "reference_video": fh,
-                "video_reference_type": "base",   # = video editing
-                "mode": config.REPLICATE_MODE,     # standard (720p) keeps cost low
-                "duration": duration,
-                "aspect_ratio": "16:9",
-                "keep_original_sound": True,
-            },
-        )
+    # Kling needs a PUBLIC, direct .mp4 URL. Replicate's own file URLs are auth'd and
+    # redirect to extension-less signed URLs (model rejects them: "must be .mp4 .. Got .").
+    # So host the clip on a public temp host and pass that direct link.
+    ref_url = _upload_public(before)
+    output = replicate.run(
+        config.REPLICATE_VIDEO_MODEL,
+        input={
+            "prompt": prompt,
+            "reference_video": ref_url,
+            "video_reference_type": "base",   # = video editing
+            "mode": config.REPLICATE_MODE,     # standard (720p) keeps cost low
+            "duration": duration,
+            "aspect_ratio": "16:9",
+            "keep_original_sound": True,
+        },
+    )
     data = _replicate_bytes(output)
     if data:
         out_path.write_bytes(data)

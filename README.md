@@ -14,17 +14,23 @@ brand's product into a video they already made. Paste a YouTube URL, name the br
 ## Stack
 - **Frontend:** React + Vite (`frontend/`)
 - **Backend:** FastAPI (`backend/`)
-- **AI:** Google `google-genai` on Vertex AI
-  - Analysis: `gemini-3.5-flash` (reads the YouTube URL directly)
-  - Edit: `gemini-2.5-flash-image` (nano-banana) — inserts the product into a keyframe, then
-    renders it back to a clip
+- **AI:**
+  - Analysis: `gemini-3.5-flash` on Vertex AI (reads the YouTube URL directly)
+  - **Image** edit: `gemini-3.1-flash-image` (Nano Banana 2) — inserts the product into a keyframe
+  - **Video** edit: Replicate `kwaivgi/kling-v3-omni-video` (video-to-video, `base` mode)
 - **Media:** `yt-dlp` + bundled `ffmpeg` (via `imageio-ffmpeg`)
+
+## Output modes
+The UI lets the user pick per run:
+- **Image** (cheap/fast): before keyframe + AI-edited after image (Nano Banana 2).
+- **Video** (pricier): short before clip + Replicate video-to-video after clip (~$0.75 at 720p/5s).
 
 ## Setup
 
 `.env` (project root) needs:
 ```
-GOOGLE_API_KEY=...   # Vertex AI key
+GOOGLE_API_KEY=...        # Vertex AI key (analysis + Nano Banana 2 image edits)
+REPLICATE_API_TOKEN=...   # only required for VIDEO output mode (Kling)
 ```
 
 ### Backend

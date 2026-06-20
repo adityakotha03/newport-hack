@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import Logo from "./components/Logo.jsx";
+import Landing from "./Landing.jsx";
 import { analyze, generate, getJob, mediaUrl } from "./api.js";
 
 const fmtTime = (s) => {
@@ -9,6 +10,7 @@ const fmtTime = (s) => {
 };
 
 export default function App() {
+  const [view, setView] = useState("landing"); // "landing" | "app"
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
     youtube_url: "",
@@ -89,10 +91,16 @@ export default function App() {
     setError("");
   }
 
+  if (view === "landing") {
+    return <Landing onLaunch={() => setView("app")} />;
+  }
+
   return (
     <div className="app">
       <header className="nav">
-        <Logo />
+        <button className="logo-btn" onClick={() => setView("landing")} title="Back to home">
+          <Logo />
+        </button>
         <span className="tagline">one video · a spectrum of brand integrations</span>
       </header>
 
@@ -188,21 +196,19 @@ function Hero({ form, update, onMode, onSubmit, loading }) {
         </div>
 
         <div>
-          <span className="clip-label" style={{ marginBottom: 10, display: "block" }}>Output</span>
+          <span className="field-label">Output</span>
           <div className="mode-toggle">
             <ModeOption
               active={form.output_mode === "image"}
               onClick={() => onMode("image")}
               title="Image"
-              desc="AI-edited still frames (Nano Banana 2). Fast & cheap."
-              cost="¢ per shot"
+              desc="AI-edited still frames. Fast to generate."
             />
             <ModeOption
               active={form.output_mode === "video"}
               onClick={() => onMode("video")}
               title="Video"
-              desc="Edited video clips (Kling video-to-video). Higher cost."
-              cost="~$0.75 / clip"
+              desc="Full-motion AI-edited video clips."
             />
           </div>
         </div>
@@ -215,12 +221,11 @@ function Hero({ form, update, onMode, onSubmit, loading }) {
   );
 }
 
-function ModeOption({ active, onClick, title, desc, cost }) {
+function ModeOption({ active, onClick, title, desc }) {
   return (
     <div className={`mode-opt ${active ? "sel" : ""}`} onClick={onClick} role="button">
       <div className="mode-title">
         <span className="mode-dot" /> {title}
-        <span className="mode-cost">{cost}</span>
       </div>
       <div className="mode-desc">{desc}</div>
     </div>
@@ -337,8 +342,8 @@ function ClipBox({ label, url, kind, download }) {
 
 function MethodBadge({ method, failed }) {
   const map = {
-    replicate: { label: "Kling Video", cls: "b-ai" },
-    "gemini-image": { label: "Nano Banana 2", cls: "b-ai" },
+    replicate: { label: "AI Video", cls: "b-ai" },
+    "gemini-image": { label: "AI Edit", cls: "b-ai" },
     overlay: { label: "Overlay", cls: "b-overlay" },
     pending: { label: "Queued", cls: "b-pending" },
     none: { label: "Failed", cls: "b-fail" },

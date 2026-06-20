@@ -1,25 +1,30 @@
 :root {
-  /* Surfaces — deep, neutral, modern */
-  --bg: #07070a;
-  --bg-elev: #0e0e13;
-  --panel: rgba(255, 255, 255, 0.025);
-  --panel-2: rgba(255, 255, 255, 0.04);
-  --border: rgba(255, 255, 255, 0.07);
-  --border-strong: rgba(255, 255, 255, 0.13);
+  /* shadcn "new-york" dark — zinc neutrals */
+  --bg: #09090b;            /* zinc-950 */
+  --bg-elev: #0c0c0f;
+  --card: #0e0e11;
+  --panel: #0e0e11;
+  --panel-2: #131316;
+  --border: #1f1f23;        /* ~zinc-800 */
+  --border-strong: #2a2a30;
+  --input-bg: #0b0b0d;
 
   /* Text */
-  --text: #ededf2;
-  --text-dim: #8b8b99;
-  --text-faint: #5c5c69;
+  --text: #fafafa;          /* zinc-50 */
+  --text-dim: #a1a1aa;      /* zinc-400 */
+  --text-faint: #71717a;    /* zinc-500 */
 
-  /* One refined accent (used sparingly). Spectrum reserved for the logo only. */
+  /* Primary = near-white (shadcn dark primary). Accent ring = subtle violet. */
+  --primary: #fafafa;
+  --primary-fg: #18181b;
   --accent: #7c6cff;
-  --accent-soft: rgba(124, 108, 255, 0.14);
-  --accent-line: rgba(124, 108, 255, 0.45);
+  --accent-soft: rgba(124, 108, 255, 0.12);
+  --ring: rgba(124, 108, 255, 0.55);
+
   --spectrum: linear-gradient(90deg, #8c5aff, #5b8bff, #36d0e0, #ec6ab0);
 
-  --radius: 16px;
-  --radius-sm: 11px;
+  --radius: 12px;
+  --radius-sm: 8px;
 }
 
 * { box-sizing: border-box; }
@@ -30,10 +35,8 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: "Inter", system-ui, sans-serif;
+  font-size: 14px;
   -webkit-font-smoothing: antialiased;
-  /* one quiet, low-opacity glow — not a rainbow wash */
-  background-image: radial-gradient(900px 480px at 70% -15%, rgba(124, 108, 255, 0.10), transparent 60%);
-  background-attachment: fixed;
 }
 
 h1, h2, h3, .logo-word, .step-title {
@@ -42,9 +45,9 @@ h1, h2, h3, .logo-word, .step-title {
   font-weight: 600;
 }
 
-/* Subtle gradient text — desaturated, used on at most one phrase */
+/* Subtle, desaturated gradient text — used on a single phrase only */
 .gradient-text {
-  background: linear-gradient(90deg, #b9acff, #8fb6ff);
+  background: linear-gradient(90deg, #c7bcff, #9ec3ff);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
