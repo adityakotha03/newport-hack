@@ -19,6 +19,10 @@ from models import Opportunity
 Result = Tuple[Optional[Path], Optional[Path], str, str, Optional[str]]
 # (before_path, after_path, media_kind, method, error)
 
+# Cache of already-downloaded source videos, keyed by youtube video id, so /generate
+# can reuse the copy /analyze downloaded (instead of downloading twice).
+SOURCE_CACHE: dict = {}
+
 
 # ---------------------------------------------------------------------------
 # Download + cut (yt-dlp / ffmpeg)
@@ -76,6 +80,13 @@ def _extract_frame(src: Path, out_png: Path, at: float = 1.0) -> None:
         str(out_png),
     ]
     subprocess.run(cmd, check=True, capture_output=True)
+
+
+def opportunity_frame(src: Path, video_id: str, opp: Opportunity) -> Path:
+    """Save a preview frame (mid-window) for an opportunity into MEDIA_DIR."""
+    out = config.MEDIA_DIR / f"oppframe_{video_id}_{opp.id}.png"
+    _extract_frame(src, out, at=max(0.5, (opp.start_sec + opp.end_sec) / 2))
+    return out
 
 
 def _clip_duration(path: Path) -> float:

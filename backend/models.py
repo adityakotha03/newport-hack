@@ -18,6 +18,7 @@ class Opportunity(BaseModel):
     why_it_fits: str
     integration_idea: str
     product_to_insert: str
+    frame_url: Optional[str] = None
 
 
 class AnalyzeResponse(BaseModel):

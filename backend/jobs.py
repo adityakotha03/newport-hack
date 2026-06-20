@@ -5,8 +5,9 @@ from pathlib import Path
 from typing import Dict
 
 import config
+from gemini_client import extract_video_id
 from models import ClipResult, GenerateRequest, Job
-from video_pipeline import download_video, produce
+from video_pipeline import SOURCE_CACHE, download_video, produce
 
 JOBS: Dict[str, Job] = {}
 _lock = threading.Lock()
@@ -43,7 +44,16 @@ def run_pipeline(job_id: str, req: GenerateRequest) -> None:
 
     src: Path | None = None
     try:
-        src = download_video(req.youtube_url)
+        # Reuse the copy /analyze already downloaded, if available.
+        try:
+            vid = extract_video_id(req.youtube_url)
+        except Exception:  # noqa: BLE001
+            vid = None
+        cached = SOURCE_CACHE.pop(vid, None) if vid else None
+        if cached is not None and cached.exists():
+            src = cached
+        else:
+            src = download_video(req.youtube_url)
         total = len(req.opportunities)
 
         for i, opp in enumerate(req.opportunities):

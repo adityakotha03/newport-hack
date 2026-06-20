@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import Logo from "./components/Logo.jsx";
 import Landing from "./Landing.jsx";
+import { ImageCompare } from "./components/BeforeAfter.jsx";
 import { analyze, generate, getJob, mediaUrl } from "./api.js";
 
 const fmtTime = (s) => {
@@ -22,6 +23,7 @@ export default function App() {
   const [error, setError] = useState("");
 
   const [opportunities, setOpportunities] = useState([]);
+  const [videoId, setVideoId] = useState("");
   const [selected, setSelected] = useState({}); // id -> bool
 
   const [job, setJob] = useState(null);
@@ -36,6 +38,7 @@ export default function App() {
     try {
       const res = await analyze(form);
       setOpportunities(res.opportunities);
+      setVideoId(res.video_id || "");
       setSelected(Object.fromEntries(res.opportunities.map((o) => [o.id, true])));
       setStep(2);
     } catch (err) {
@@ -121,6 +124,7 @@ export default function App() {
       {step === 2 && (
         <Opportunities
           opportunities={opportunities}
+          videoId={videoId}
           selected={selected}
           setSelected={setSelected}
           onBack={() => setStep(1)}
@@ -239,30 +243,47 @@ function ModeOption({ active, onClick, title, desc, soon, badge }) {
   );
 }
 
-function Opportunities({ opportunities, selected, setSelected, onBack, onGenerate, loading, brand }) {
+function Opportunities({ opportunities, videoId, selected, setSelected, onBack, onGenerate, loading, brand }) {
   const count = Object.values(selected).filter(Boolean).length;
   return (
     <section className="panel-section">
       <div className="section-head">
         <h2 className="step-title">Where <span className="gradient-text">{brand || "the brand"}</span> fits</h2>
-        <p className="sub">Pick the moments to render. Each becomes a ~10s before/after clip.</p>
+        <p className="sub">Preview each moment, then pick the ones to render.</p>
       </div>
       <div className="opp-grid">
         {opportunities.map((o) => (
-          <label key={o.id} className={`card opp ${selected[o.id] ? "sel" : ""}`}>
-            <div className="opp-top">
-              <span className="time-chip">{fmtTime(o.start_sec)}–{fmtTime(o.end_sec)}</span>
-              <input
-                type="checkbox"
-                checked={!!selected[o.id]}
-                onChange={(e) => setSelected({ ...selected, [o.id]: e.target.checked })}
-              />
-            </div>
-            <h3>{o.product_to_insert}</h3>
-            <p className="opp-scene">{o.scene_summary}</p>
-            <p className="opp-idea"><b>Integration:</b> {o.integration_idea}</p>
-            <p className="opp-why"><b>Why it fits:</b> {o.why_it_fits}</p>
-          </label>
+          <div key={o.id} className={`card opp ${selected[o.id] ? "sel" : ""}`}>
+            {o.frame_url ? (
+              <div className="opp-preview">
+                <img src={mediaUrl(o.frame_url)} alt={o.scene_summary} loading="lazy" />
+              </div>
+            ) : videoId ? (
+              <div className="opp-preview">
+                <iframe
+                  src={`https://www.youtube.com/embed/${videoId}?start=${Math.floor(o.start_sec)}`}
+                  title={`Preview ${o.id}`}
+                  loading="lazy"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+            ) : null}
+            <label className="opp-body">
+              <div className="opp-top">
+                <span className="time-chip">{fmtTime(o.start_sec)}–{fmtTime(o.end_sec)}</span>
+                <input
+                  type="checkbox"
+                  checked={!!selected[o.id]}
+                  onChange={(e) => setSelected({ ...selected, [o.id]: e.target.checked })}
+                />
+              </div>
+              <h3>{o.product_to_insert}</h3>
+              <p className="opp-scene">{o.scene_summary}</p>
+              <p className="opp-idea"><b>Integration:</b> {o.integration_idea}</p>
+              <p className="opp-why"><b>Why it fits:</b> {o.why_it_fits}</p>
+            </label>
+          </div>
         ))}
       </div>
       <div className="actions">
@@ -296,26 +317,40 @@ function Results({ job, onReset, brand }) {
 
       {job.status === "error" && <div className="alert">{job.error}</div>}
 
-      <div className="results-grid">
-        {job.clips.map((c, i) => (
-          <div key={i} className="card result">
-            <div className="result-head">
-              <span className="time-chip">{fmtTime(c.opportunity.start_sec)}–{fmtTime(c.opportunity.end_sec)}</span>
-              <MethodBadge method={c.edit_method} failed={c.edit_failed} />
+      <div className="results-list">
+        {job.clips.map((c, i) => {
+          const before = mediaUrl(c.before_url);
+          const after = mediaUrl(c.after_url);
+          const ready = !!after;
+          const dl = `${brand}-${c.media_kind === "image" ? "shot" : "clip"}-${i + 1}.${c.media_kind === "image" ? "png" : "mp4"}`;
+          return (
+            <div key={i} className="card result-big">
+              <div className="result-head">
+                <span className="time-chip">{fmtTime(c.opportunity.start_sec)}–{fmtTime(c.opportunity.end_sec)}</span>
+                <h3>{c.opportunity.product_to_insert}</h3>
+                <MethodBadge method={c.edit_method} failed={c.edit_failed} />
+              </div>
+
+              {!ready ? (
+                <div className="clip-placeholder big"><span className="spinner" /> rendering…</div>
+              ) : c.media_kind === "image" ? (
+                <ImageCompare before={before} after={after} />
+              ) : (
+                <div className="ba">
+                  <ClipBox label="Before" url={before} kind={c.media_kind} />
+                  <ClipBox label="After" url={after} kind={c.media_kind} download={dl} />
+                </div>
+              )}
+
+              {ready && (
+                <div className="result-actions">
+                  <a className="btn tiny" href={after} download={dl}>↓ Download {c.media_kind === "image" ? "image" : "clip"}</a>
+                  {c.error && <span className="tiny-note">note: {c.error}</span>}
+                </div>
+              )}
             </div>
-            <h3>{c.opportunity.product_to_insert}</h3>
-            <div className="ba">
-              <ClipBox label="Before" url={mediaUrl(c.before_url)} kind={c.media_kind} />
-              <ClipBox
-                label="After"
-                url={mediaUrl(c.after_url)}
-                kind={c.media_kind}
-                download={`${brand}-${c.media_kind === "image" ? "shot" : "clip"}-${i + 1}.${c.media_kind === "image" ? "png" : "mp4"}`}
-              />
-            </div>
-            {c.error && <p className="tiny-note">note: {c.error}</p>}
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="actions">
