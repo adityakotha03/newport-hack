@@ -1,8 +1,16 @@
 import Logo from "./components/Logo.jsx";
-import { ImageCompare, VideoCompare } from "./components/BeforeAfter.jsx";
-import { API } from "./api.js";
+import { ImageCompare } from "./components/BeforeAfter.jsx";
 
-const m = (f) => `${API}/media/${f}`;
+// Bundled static assets (frontend/public/showcase) so the deployed site works
+// without a backend.
+const m = (f) => `${import.meta.env.BASE_URL}showcase/${f}`;
+
+// Curated before/after samples (each needs <file>_before.png and <file>_after.png in media/)
+const SHOWCASE = [
+  { file: "show_1", brand: "Corona Extra", scene: "beachfront" },
+  { file: "show_2", brand: "Coca-Cola", scene: "the same scene, any brand" },
+  { file: "show_3", brand: "Red Bull", scene: "the same scene, any brand" },
+];
 
 export default function Landing({ onLaunch }) {
   return (
@@ -35,8 +43,8 @@ export default function Landing({ onLaunch }) {
         </div>
 
         <div className="hero-visual">
-          <ImageCompare before={m("showcase_img_before.png")} after={m("showcase_img_after.png")} />
-          <p className="hero-cap">Real output — a Coca-Cola can inserted into existing footage. Drag to compare.</p>
+          <ImageCompare before={m("show_hero_before.png")} after={m("show_hero_after.png")} />
+          <p className="hero-cap">Real output — a brand inserted into existing footage. Drag to compare.</p>
         </div>
       </section>
 
@@ -78,17 +86,18 @@ export default function Landing({ onLaunch }) {
       <section className="lp-section" id="results">
         <span className="tag-chip">Presentation · Proof</span>
         <h2>Real generations, not mockups.</h2>
-        <p className="lp-lead">Every asset below was produced by the live pipeline from a real YouTube video.</p>
+        <p className="lp-lead">
+          Every frame below was produced by the live pipeline from a real YouTube video.
+          Drag the slider to reveal the brand integration.
+        </p>
 
-        <div className="result-showcase">
-          <div className="showcase-card card">
-            <h3>Image output</h3>
-            <ImageCompare before={m("showcase_img_before.png")} after={m("showcase_img_after.png")} />
-          </div>
-          <div className="showcase-card card">
-            <h3>Video output</h3>
-            <VideoCompare before={m("showcase_vid_before.mp4")} after={m("showcase_vid_after.mp4")} />
-          </div>
+        <div className="gallery">
+          {SHOWCASE.map((s) => (
+            <figure className="gallery-item" key={s.file}>
+              <ImageCompare before={m(`${s.file}_before.png`)} after={m(`${s.file}_after.png`)} />
+              <figcaption><b>{s.brand}</b> · {s.scene}</figcaption>
+            </figure>
+          ))}
         </div>
       </section>
 
@@ -112,14 +121,15 @@ export default function Landing({ onLaunch }) {
         </div>
       </section>
 
-      {/* AI capabilities */}
+      {/* AI stack */}
       <section className="lp-section" id="stack">
-        <h2 className="center">AI at the core</h2>
+        <h2 className="center">Built on frontier AI</h2>
+        <p className="lp-lead center-block">The pipeline chains best-in-class models end to end.</p>
         <div className="stack-badges">
-          <span className="stack-badge">Multimodal video understanding</span>
-          <span className="stack-badge">Generative image editing</span>
-          <span className="stack-badge">Video-to-video synthesis</span>
-          <span className="stack-badge">End-to-end automated pipeline</span>
+          <span className="stack-badge">Gemini 3.5 Flash · video understanding</span>
+          <span className="stack-badge">Nano Banana 2 · image editing</span>
+          <span className="stack-badge">Kling v3 Omni · video-to-video</span>
+          <span className="stack-badge">FastAPI · React</span>
         </div>
       </section>
 

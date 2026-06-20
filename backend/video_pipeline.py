@@ -98,15 +98,20 @@ def _clip_duration(path: Path) -> float:
 # ---------------------------------------------------------------------------
 def _image_prompt(brand_name: str, brand_desc: str, opp: Opportunity) -> str:
     return (
-        "You are a world-class professional photo retoucher specializing in photorealistic "
-        "product placement for advertising. Edit this photograph to naturally place the product "
-        f"'{opp.product_to_insert}' from the brand '{brand_name}' into the scene. "
-        f"Placement: {opp.integration_idea}. Brand context: {brand_desc}. "
-        "Requirements: the product must be photorealistic, accurately branded, and realistically "
-        "scaled for its surroundings; perspective, lighting direction, shadows, reflections, depth "
-        "of field and color grading must exactly match the scene so it looks like it was physically "
-        "there when the photo was taken — never pasted on. Do NOT change anything else: keep the "
-        "people, poses, background, framing and style identical. Output only the final edited photograph."
+        "You are a world-class professional photo retoucher and VFX compositor specializing in "
+        "photorealistic, invisible product placement for high-end advertising. Edit this photograph "
+        f"to place the product '{opp.product_to_insert}' from the brand '{brand_name}' into the scene "
+        "so naturally that a viewer cannot tell it was added. "
+        f"Suggested placement: {opp.integration_idea}. Brand context: {brand_desc}. "
+        "PLACEMENT must be physically believable: put the product on a real supporting surface where "
+        "an object would actually rest (not floating, not awkwardly centered), at a realistic size "
+        "relative to nearby objects and people, at a natural distance and angle. "
+        "INTEGRATION must be flawless: correct perspective and orientation, accurate grounding with "
+        "contact shadows, matching light direction and color temperature, proper occlusion behind "
+        "foreground elements, matching depth of field/blur, grain and color grade of the photo. "
+        "The result must look like it was physically present when the photo was taken — never like a "
+        "sticker or cut-and-paste. Do NOT alter anything else: keep people, poses, background, "
+        "framing and style identical. Output only the final edited photograph."
     )
 
 

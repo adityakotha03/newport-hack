@@ -79,6 +79,14 @@ input[type="text"]:focus {
 .mode-opt .mode-desc { font-size: 12.5px; color: var(--text-dim); margin-top: 5px; line-height: 1.45; }
 .mode-dot { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--text-faint); transition: all .15s; flex-shrink: 0; }
 .mode-opt.sel .mode-dot { border-color: var(--accent); border-width: 4px; }
+.mode-opt.soon { opacity: .72; }
+.mode-opt.soon:hover { opacity: 1; }
+.soon-badge {
+  margin-left: auto; font-size: 10px; font-weight: 600; letter-spacing: .03em;
+  padding: 2px 8px; border-radius: 999px; color: #b5a8ff;
+  background: var(--accent-soft); border: 1px solid rgba(124,108,255,0.3);
+}
+.soon-note { font-size: 12.5px; color: var(--text-dim); margin: 10px 0 0; }
 
 /* ---- Buttons (shadcn-like) ---- */
 .btn {

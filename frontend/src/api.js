@@ -1,4 +1,5 @@
-export const API = "http://localhost:8000";
+// Override at build/deploy time with VITE_API_URL (e.g. your hosted backend).
+export const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 async function jsonOrThrow(res) {
   if (!res.ok) {

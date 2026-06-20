@@ -152,6 +152,7 @@ function Stepper({ step }) {
 }
 
 function Hero({ form, update, onMode, onSubmit, loading }) {
+  const [videoSoon, setVideoSoon] = useState(false);
   return (
     <section className="hero">
       <h1>
@@ -200,17 +201,22 @@ function Hero({ form, update, onMode, onSubmit, loading }) {
           <div className="mode-toggle">
             <ModeOption
               active={form.output_mode === "image"}
-              onClick={() => onMode("image")}
+              onClick={() => { setVideoSoon(false); onMode("image"); }}
               title="Image"
               desc="AI-edited still frames. Fast to generate."
             />
             <ModeOption
-              active={form.output_mode === "video"}
-              onClick={() => onMode("video")}
+              active={false}
+              soon
+              badge="Coming soon"
+              onClick={() => setVideoSoon(true)}
               title="Video"
               desc="Full-motion AI-edited video clips."
             />
           </div>
+          {videoSoon && (
+            <p className="soon-note">🎬 Video output is coming soon — Image mode is fully live.</p>
+          )}
         </div>
 
         <button className="btn primary" disabled={loading}>
@@ -221,11 +227,12 @@ function Hero({ form, update, onMode, onSubmit, loading }) {
   );
 }
 
-function ModeOption({ active, onClick, title, desc }) {
+function ModeOption({ active, onClick, title, desc, soon, badge }) {
   return (
-    <div className={`mode-opt ${active ? "sel" : ""}`} onClick={onClick} role="button">
+    <div className={`mode-opt ${active ? "sel" : ""} ${soon ? "soon" : ""}`} onClick={onClick} role="button">
       <div className="mode-title">
         <span className="mode-dot" /> {title}
+        {badge && <span className="soon-badge">{badge}</span>}
       </div>
       <div className="mode-desc">{desc}</div>
     </div>

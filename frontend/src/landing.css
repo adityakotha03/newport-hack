@@ -53,6 +53,7 @@
 .lp-section h2 { font-size: 34px; margin: 14px 0 16px; letter-spacing: -0.03em; }
 .lp-section h2.center { text-align: center; }
 .lp-lead { color: var(--text-dim); font-size: 16px; line-height: 1.6; max-width: 620px; }
+.center-block { margin-left: auto; margin-right: auto; text-align: center; }
 .tag-chip {
   display: inline-block; font-size: 11.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
   color: var(--text-faint); border: 1px solid var(--border); padding: 4px 11px; border-radius: 999px;
@@ -78,13 +79,11 @@
 .step-model { font-size: 11.5px; color: var(--accent); font-weight: 600; letter-spacing: .02em; }
 .step p { color: var(--text-dim); font-size: 13.5px; line-height: 1.6; margin: 12px 0 0; }
 
-/* Results */
-.result-showcase { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 30px; }
-.showcase-card h3 { font-size: 15px; margin: 0 0 14px; color: var(--text-dim); font-weight: 600; }
-.vid-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.vid-compare figure { margin: 0; }
-.vid-compare video { width: 100%; border-radius: var(--radius-sm); aspect-ratio: 16/9; object-fit: cover; background: #000; border: 1px solid var(--border); }
-.vid-compare figcaption { font-size: 11px; color: var(--text-faint); margin-top: 7px; text-transform: uppercase; letter-spacing: .07em; font-weight: 600; }
+/* Results gallery */
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 18px; margin-top: 30px; }
+.gallery-item { margin: 0; }
+.gallery-item figcaption { font-size: 13px; color: var(--text-dim); margin-top: 11px; }
+.gallery-item figcaption b { color: var(--text); }
 
 /* Why / Innovation */
 .why-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-top: 28px; }
