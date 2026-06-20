@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+google-genai
+yt-dlp
+imageio-ffmpeg
+pydantic
+python-dotenv
+requests
+Pillow
+replicate

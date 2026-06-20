@@ -1,0 +1,15 @@
+# Python
+backend/venv/
+__pycache__/
+*.pyc
+
+# Generated media + temp
+backend/media/*.mp4
+backend/tmp/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Secrets
+.env

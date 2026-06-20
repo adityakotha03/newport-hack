@@ -1,0 +1,53 @@
+:root {
+  /* Surfaces — deep, neutral, modern */
+  --bg: #07070a;
+  --bg-elev: #0e0e13;
+  --panel: rgba(255, 255, 255, 0.025);
+  --panel-2: rgba(255, 255, 255, 0.04);
+  --border: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.13);
+
+  /* Text */
+  --text: #ededf2;
+  --text-dim: #8b8b99;
+  --text-faint: #5c5c69;
+
+  /* One refined accent (used sparingly). Spectrum reserved for the logo only. */
+  --accent: #7c6cff;
+  --accent-soft: rgba(124, 108, 255, 0.14);
+  --accent-line: rgba(124, 108, 255, 0.45);
+  --spectrum: linear-gradient(90deg, #8c5aff, #5b8bff, #36d0e0, #ec6ab0);
+
+  --radius: 16px;
+  --radius-sm: 11px;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Inter", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  /* one quiet, low-opacity glow — not a rainbow wash */
+  background-image: radial-gradient(900px 480px at 70% -15%, rgba(124, 108, 255, 0.10), transparent 60%);
+  background-attachment: fixed;
+}
+
+h1, h2, h3, .logo-word, .step-title {
+  font-family: "Space Grotesk", "Inter", sans-serif;
+  letter-spacing: -0.025em;
+  font-weight: 600;
+}
+
+/* Subtle gradient text — desaturated, used on at most one phrase */
+.gradient-text {
+  background: linear-gradient(90deg, #b9acff, #8fb6ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+::selection { background: var(--accent-soft); }
