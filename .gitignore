@@ -6,6 +6,7 @@ __pycache__/
 # Generated media + temp
 backend/media/*.mp4
 backend/tmp/
+backend/jobs/
 
 # Node
 frontend/node_modules/

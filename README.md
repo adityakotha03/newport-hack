@@ -49,6 +49,7 @@ npm run dev      # http://localhost:5173
 ```
 
 ## API
+- `GET /reviews/{share_token}` returns read-only sponsor review data
 - `POST /analyze` `{youtube_url, brand_name, brand_description}` → `{video_id, opportunities[]}`
 - `POST /generate` `{youtube_url, brand_name, brand_description, opportunities[]}` → `{job_id, …}`
 - `GET  /jobs/{job_id}` → job status + before/after clip URLs
@@ -63,7 +64,8 @@ npm run dev      # http://localhost:5173
 
 Enable the first two once you have proper credentials: set `ENABLE_OMNI=1` / `ENABLE_VEO=1`.
 ## Storage
-The downloaded source video is deleted after each job (try/finally). Only the final
-before/after clips are kept in `backend/media/`.
+The downloaded source video is deleted after each job (try/finally). Final before/after
+assets remain in `backend/media/`, while lightweight job snapshots in `backend/jobs/`
+keep completed sponsor-review links available across backend restarts.
 
 Open the presentation at `/` and the live workspace at `/studio`.

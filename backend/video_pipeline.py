@@ -13,7 +13,7 @@ from typing import Optional, Tuple
 from google.genai import types
 
 import config
-from gemini_client import decode_image, get_client, _SAFETY
+from gemini_client import decode_image, generate_with_retry, get_client, _SAFETY
 from models import Opportunity, PlacementBox
 
 Result = Tuple[Optional[Path], Optional[Path], str, str, Optional[str]]
@@ -222,24 +222,25 @@ def _gemini_edit_image(frame: Path, brand_name: str, brand_desc: str,
         prompt += f" Additional operator instruction: {feedback.strip()[:1000]}"
     parts.append(types.Part(text=prompt))
     contents = [types.Content(role="user", parts=parts)]
-    resp = client.models.generate_content(
-        model=config.IMAGE_EDIT_MODEL,
-        contents=contents,
-        config=types.GenerateContentConfig(
-            response_modalities=["IMAGE", "TEXT"], safety_settings=_SAFETY
-        ),
-    )
-    for cand in (resp.candidates or []):
-        for part in (cand.content.parts if cand.content else []):
-            data = getattr(getattr(part, "inline_data", None), "data", None)
-            if data:
-                out_png.write_bytes(data)
-                if guide is not None:
-                    guide.unlink(missing_ok=True)
-                return True
-    if guide is not None:
-        guide.unlink(missing_ok=True)
-    return False
+    try:
+        resp = generate_with_retry(
+            client,
+            model=config.IMAGE_EDIT_MODEL,
+            contents=contents,
+            request_config=types.GenerateContentConfig(
+                response_modalities=["IMAGE", "TEXT"], safety_settings=_SAFETY
+            ),
+        )
+        for cand in (resp.candidates or []):
+            for part in (cand.content.parts if cand.content else []):
+                data = getattr(getattr(part, "inline_data", None), "data", None)
+                if data:
+                    out_png.write_bytes(data)
+                    return True
+        return False
+    finally:
+        if guide is not None:
+            guide.unlink(missing_ok=True)
 
 
 def refine_placement(before_png: Path, brand_name: str, brand_desc: str,

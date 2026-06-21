@@ -170,6 +170,8 @@ export default function App() {
           onGenerate={onGenerate}
           loading={loading}
           brand={form.brand_name}
+          job={job}
+          onViewResults={() => setStep(3)}
         />
       )}
 
@@ -177,6 +179,7 @@ export default function App() {
         <Results
           job={job}
           onReset={reset}
+          onReviewOpportunities={() => setStep(2)}
           brand={form.brand_name}
           brandDescription={form.brand_description}
           brandImage={form.brand_image}
@@ -330,13 +333,17 @@ function ModeOption({ active, onClick, title, desc, soon, badge }) {
   );
 }
 
-function Opportunities({ opportunities, videoId, selected, setSelected, onBack, onGenerate, loading, brand }) {
+function Opportunities({ opportunities, videoId, selected, setSelected, onBack, onGenerate, loading, brand, job, onViewResults }) {
   const count = Object.values(selected).filter(Boolean).length;
+  const hasRender = !!job;
+  const rendering = job?.status === "queued" || job?.status === "running";
   return (
     <section className="panel-section">
       <div className="section-head">
         <h2 className="step-title">Where <span className="gradient-text">{brand || "the brand"}</span> fits</h2>
-        <p className="sub">Preview each moment, then pick the ones to render.</p>
+        <p className="sub">
+          {rendering ? "Rendering continues in the background. Review the selected moments and Gemini's rationale." : "Preview each moment, then pick the ones to render."}
+        </p>
       </div>
       <div className="opp-grid">
         {opportunities.map((o) => (
@@ -355,6 +362,7 @@ function Opportunities({ opportunities, videoId, selected, setSelected, onBack, 
                 <input
                   type="checkbox"
                   checked={!!selected[o.id]}
+                  disabled={hasRender}
                   onChange={(e) => setSelected({ ...selected, [o.id]: e.target.checked })}
                 />
               </div>
@@ -368,8 +376,10 @@ function Opportunities({ opportunities, videoId, selected, setSelected, onBack, 
       </div>
       <div className="actions">
         <button className="btn ghost" onClick={onBack}>← Back</button>
-        <button className="btn primary" onClick={onGenerate} disabled={loading}>
-          {loading ? "Starting…" : `Render ${count} clip${count === 1 ? "" : "s"} →`}
+        <button className="btn primary" onClick={hasRender ? onViewResults : onGenerate} disabled={loading}>
+          {hasRender ? (rendering ? "View render" : "View results") : (
+          loading ? "Starting..." : `Render ${count} clip${count === 1 ? "" : "s"} ->`
+          )}
         </button>
       </div>
     </section>
@@ -394,7 +404,7 @@ function PreviewFrame({ src, videoId, alt }) {
   );
 }
 
-function Results({ job, onReset, brand, brandDescription, brandImage, onRefined }) {
+function Results({ job, onReset, onReviewOpportunities, brand, brandDescription, brandImage, onRefined }) {
   const [editingIndex, setEditingIndex] = useState(null);
   if (!job) return null;
   const pct = Math.round((job.progress || 0) * 100);
@@ -460,6 +470,7 @@ function Results({ job, onReset, brand, brandDescription, brandImage, onRefined 
 
       <div className="actions">
         <button className="btn ghost" onClick={onReset}>↺ New video</button>
+        <button className="btn ghost" onClick={onReviewOpportunities}>Review picked moments</button>
         {job.status === "done" && job.share_token && <SponsorReviewLink shareToken={job.share_token} />}
       </div>
       {editingIndex !== null && job.clips[editingIndex] && (

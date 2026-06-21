@@ -2,6 +2,7 @@
 import base64
 import json
 import re
+import time
 import uuid
 from typing import List, Optional, Tuple
 
@@ -65,6 +66,27 @@ _SAFETY = [
         "HARM_CATEGORY_HARASSMENT",
     )
 ]
+
+
+def _is_resource_exhausted(error: Exception) -> bool:
+    message = str(error).lower()
+    return "resource_exhausted" in message or "429" in message or "quota" in message
+
+
+def generate_with_retry(client, *, model: str, contents, request_config):
+    """Retry Gemini quota throttling up to three times, three seconds apart."""
+    last_error = None
+    for attempt in range(3):
+        try:
+            return client.models.generate_content(
+                model=model, contents=contents, config=request_config
+            )
+        except Exception as exc:  # noqa: BLE001 - SDK exception types vary by version
+            last_error = exc
+            if not _is_resource_exhausted(exc) or attempt == 2:
+                raise
+            time.sleep(3)
+    raise last_error  # pragma: no cover - loop either returns or raises
 
 
 def _build_prompt(brand_name: str, brand_desc: str, clip_seconds: int) -> str:
@@ -156,7 +178,7 @@ def analyze_video(youtube_url: str, brand_name: str, brand_desc: str,
         thinking_config=types.ThinkingConfig(thinking_level="MEDIUM"),
     )
 
-    resp = client.models.generate_content(
-        model=config.ANALYSIS_MODEL, contents=contents, config=cfg
+    resp = generate_with_retry(
+        client, model=config.ANALYSIS_MODEL, contents=contents, request_config=cfg
     )
     return _parse_opportunities(resp.text, config.CLIP_SECONDS)
