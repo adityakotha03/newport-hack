@@ -36,4 +36,18 @@ export async function getJob(jobId) {
   return jsonOrThrow(res);
 }
 
+export async function getReview(shareToken) {
+  const res = await fetch(`${API}/reviews/${shareToken}`);
+  return jsonOrThrow(res);
+}
+
+export async function refinePlacement(payload) {
+  const res = await fetch(`${API}/refine`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return jsonOrThrow(res);
+}
+
 export const mediaUrl = (path) => (path ? `${API}${path}` : null);

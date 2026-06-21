@@ -88,6 +88,19 @@ input[type="text"]:focus {
 }
 .soon-note { font-size: 12.5px; color: var(--text-dim); margin: 10px 0 0; }
 
+/* ---- Brand reference upload ---- */
+.opt { color: var(--text-faint); font-weight: 400; }
+.ref-drop {
+  display: flex; align-items: center; justify-content: center;
+  padding: 18px; border: 1px dashed var(--border-strong); border-radius: var(--radius-sm);
+  background: var(--input-bg); color: var(--text-dim); font-size: 13.5px; cursor: pointer;
+  transition: border-color .15s, color .15s;
+}
+.ref-drop:hover { border-color: var(--ring); color: var(--text); }
+.ref-preview { display: flex; align-items: center; gap: 14px; }
+.ref-preview img { width: 72px; height: 72px; object-fit: cover; border-radius: var(--radius-sm); border: 1px solid var(--border); }
+.ref-actions { display: flex; flex-direction: column; gap: 7px; font-size: 13px; color: var(--text-dim); align-items: flex-start; }
+
 /* ---- Buttons (shadcn-like) ---- */
 .btn {
   border: 1px solid transparent; border-radius: var(--radius-sm); cursor: pointer;
@@ -153,6 +166,44 @@ input[type="text"]:focus {
 }
 .tiny-note { font-size: 11px; color: var(--text-faint); margin: 10px 0 0; }
 
+/* ---- Placement refinement ---- */
+.modal-backdrop {
+  position: fixed; inset: 0; z-index: 50; display: grid; place-items: center;
+  padding: 20px; background: rgba(0, 0, 0, 0.72); backdrop-filter: blur(4px);
+}
+.placement-modal {
+  width: min(760px, 100%); max-height: calc(100vh - 40px); overflow: auto;
+  background: var(--card); border: 1px solid var(--border-strong); border-radius: var(--radius);
+  padding: 20px; box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+}
+.modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 16px; }
+.modal-head h3 { margin: 0 0 5px; font-size: 18px; }
+.modal-head p { margin: 0; color: var(--text-dim); font-size: 13px; line-height: 1.5; }
+.icon-btn {
+  width: 32px; height: 32px; display: grid; place-items: center; flex: 0 0 auto;
+  border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--panel-2);
+  color: var(--text-dim); cursor: pointer; font-size: 18px; line-height: 1;
+}
+.icon-btn:hover:not(:disabled) { color: var(--text); border-color: var(--border-strong); }
+.placement-stage {
+  position: relative; overflow: hidden; border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm); background: #000; cursor: crosshair; touch-action: none;
+}
+.placement-stage img { display: block; width: 100%; height: auto; user-select: none; }
+.placement-box {
+  position: absolute; border: 2px solid #f87171; background: rgba(248, 113, 113, 0.14);
+  pointer-events: none;
+}
+.placement-feedback { margin-top: 16px; }
+.placement-feedback textarea {
+  width: 100%; min-height: 78px; resize: vertical; padding: 10px 12px;
+  font: inherit; color: var(--text); background: var(--input-bg); border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.placement-feedback textarea:focus { outline: none; border-color: var(--ring); box-shadow: 0 0 0 3px var(--accent-soft); }
+.modal-alert { margin: 14px 0 0; }
+.modal-actions { display: grid; grid-template-columns: auto 1fr auto auto; gap: 10px; margin-top: 18px; }
+
 /* ---- Badges ---- */
 .badge { font-size: 10.5px; font-weight: 500; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--border); }
 .b-ai { background: var(--accent-soft); color: #b5a8ff; border-color: rgba(124,108,255,0.3); }
@@ -182,4 +233,6 @@ input[type="text"]:focus {
 @media (max-width: 640px) {
   .hero h1 { font-size: 30px; }
   .form .row, .mode-toggle, .ba { grid-template-columns: 1fr; flex-direction: column; }
+  .modal-actions { grid-template-columns: 1fr 1fr; }
+  .modal-actions span { display: none; }
 }

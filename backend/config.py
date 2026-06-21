@@ -51,8 +51,10 @@ MAX_DOWNLOAD_HEIGHT = int(os.environ.get("MAX_DOWNLOAD_HEIGHT", "720"))
 BACKEND_DIR = Path(__file__).resolve().parent
 MEDIA_DIR = BACKEND_DIR / "media"          # final before/after clips (served)
 TMP_DIR = BACKEND_DIR / "tmp"              # source downloads (deleted after job)
+JOBS_DIR = BACKEND_DIR / "jobs"            # small JSON snapshots for recoverable review links
 MEDIA_DIR.mkdir(exist_ok=True)
 TMP_DIR.mkdir(exist_ok=True)
+JOBS_DIR.mkdir(exist_ok=True)
 
 
 def ffmpeg_exe() -> str:

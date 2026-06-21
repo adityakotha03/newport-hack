@@ -13,8 +13,8 @@ from typing import Optional, Tuple
 from google.genai import types
 
 import config
-from gemini_client import get_client, _SAFETY
-from models import Opportunity
+from gemini_client import decode_image, get_client, _SAFETY
+from models import Opportunity, PlacementBox
 
 Result = Tuple[Optional[Path], Optional[Path], str, str, Optional[str]]
 # (before_path, after_path, media_kind, method, error)
@@ -22,6 +22,21 @@ Result = Tuple[Optional[Path], Optional[Path], str, str, Optional[str]]
 # Cache of already-downloaded source videos, keyed by youtube video id, so /generate
 # can reuse the copy /analyze downloaded (instead of downloading twice).
 SOURCE_CACHE: dict = {}
+
+
+def clear_workspace() -> None:
+    """Delete temporary source files and reset the source cache.
+
+    Completed media stays available so existing job and sponsor-review links do not
+    break when someone begins a new analysis.
+    """
+    for f in config.TMP_DIR.glob("*"):
+        try:
+            if f.is_file():
+                f.unlink()
+        except Exception:  # noqa: BLE001
+            pass
+    SOURCE_CACHE.clear()
 
 
 # ---------------------------------------------------------------------------
@@ -73,20 +88,37 @@ def cut_clip(src: Path, start: float, end: float, out_name: str) -> Path:
 
 def _extract_frame(src: Path, out_png: Path, at: float = 1.0) -> None:
     """Grab a single representative frame at `at` seconds."""
+    out_png.unlink(missing_ok=True)
     cmd = [
         config.ffmpeg_exe(), "-y",
-        "-ss", str(max(0, at)), "-i", str(src),
-        "-frames:v", "1", "-q:v", "2",
+        "-i", str(src), "-ss", str(max(0, at)),
+        "-an", "-frames:v", "1", "-update", "1",
         str(out_png),
     ]
     subprocess.run(cmd, check=True, capture_output=True)
+    if not out_png.exists() or out_png.stat().st_size <= 1024:
+        raise RuntimeError("ffmpeg did not produce a usable preview frame")
 
 
 def opportunity_frame(src: Path, video_id: str, opp: Opportunity) -> Path:
-    """Save a preview frame (mid-window) for an opportunity into MEDIA_DIR."""
+    """Save a preview frame, retrying nearby timestamps when a seek lands between frames."""
     out = config.MEDIA_DIR / f"oppframe_{video_id}_{opp.id}.png"
-    _extract_frame(src, out, at=max(0.5, (opp.start_sec + opp.end_sec) / 2))
-    return out
+    duration = _clip_duration(src)
+    latest = max(0, duration - 0.1)
+    times = (
+        (opp.start_sec + opp.end_sec) / 2,
+        opp.start_sec + 0.25,
+        opp.end_sec - 0.25,
+        0,
+    )
+    last_error = None
+    for at in dict.fromkeys(round(min(latest, max(0, value)), 3) for value in times):
+        try:
+            _extract_frame(src, out, at=at)
+            return out
+        except Exception as exc:  # noqa: BLE001 - the next timestamp may be decodable
+            last_error = exc
+    raise RuntimeError(f"Could not extract preview frame: {last_error}")
 
 
 def _clip_duration(path: Path) -> float:
@@ -137,16 +169,59 @@ def _video_prompt(brand_name: str, brand_desc: str, opp: Opportunity) -> str:
     )
 
 
+def _make_placement_guide(frame: Path, placement: PlacementBox) -> Path:
+    """Create an annotated copy used as a visual target for the image-edit model."""
+    from PIL import Image, ImageDraw
+
+    guide_path = config.TMP_DIR / f"placement_{uuid.uuid4().hex[:8]}.png"
+    with Image.open(frame) as source:
+        image = source.convert("RGB")
+    width, height = image.size
+    left = min(width - 1, max(0, round(placement.x * width)))
+    top = min(height - 1, max(0, round(placement.y * height)))
+    right = min(width - 1, max(left + 1, round((placement.x + placement.width) * width)))
+    bottom = min(height - 1, max(top + 1, round((placement.y + placement.height) * height)))
+    stroke = max(3, min(width, height) // 180)
+
+    ImageDraw.Draw(image).rectangle(
+        (left, top, right, bottom), outline=(245, 68, 68), width=stroke
+    )
+    image.save(guide_path)
+    return guide_path
+
+
 # ---------------------------------------------------------------------------
 # Gemini image edit (the IMAGE mode + a VIDEO fallback)
 # ---------------------------------------------------------------------------
 def _gemini_edit_image(frame: Path, brand_name: str, brand_desc: str,
-                       opp: Opportunity, out_png: Path) -> bool:
-    """Insert the product into a still frame with gemini-2.5-flash-image."""
+                       opp: Opportunity, out_png: Path,
+                       brand_image: Optional[str] = None,
+                       placement: Optional[PlacementBox] = None,
+                       feedback: str = "") -> bool:
+    """Insert the product into a still frame with Nano Banana 2 (gemini-3.1-flash-image)."""
     client = get_client()
     prompt = _image_prompt(brand_name, brand_desc, opp)
-    image_part = types.Part.from_bytes(data=frame.read_bytes(), mime_type="image/png")
-    contents = [types.Content(role="user", parts=[image_part, types.Part(text=prompt)])]
+    parts = [types.Part.from_bytes(data=frame.read_bytes(), mime_type="image/png")]
+    guide = None
+    if placement is not None:
+        guide = _make_placement_guide(frame, placement)
+        parts.append(types.Part.from_bytes(data=guide.read_bytes(), mime_type="image/png"))
+        prompt += (
+            " A placement guide is attached as the second image. Its red rectangle marks the "
+            "exact target region. Place the entire product inside that region, preserve its "
+            "boundaries and perspective, and never include the red rectangle in the output."
+        )
+    ref = decode_image(brand_image)
+    if ref is not None:
+        parts.append(types.Part.from_bytes(data=ref[0], mime_type=ref[1]))
+        prompt += (
+            f" A product reference is attached as the {'third' if placement is not None else 'second'} "
+            "image. Match its exact appearance, logo, colors and proportions precisely."
+        )
+    if feedback.strip():
+        prompt += f" Additional operator instruction: {feedback.strip()[:1000]}"
+    parts.append(types.Part(text=prompt))
+    contents = [types.Content(role="user", parts=parts)]
     resp = client.models.generate_content(
         model=config.IMAGE_EDIT_MODEL,
         contents=contents,
@@ -159,8 +234,24 @@ def _gemini_edit_image(frame: Path, brand_name: str, brand_desc: str,
             data = getattr(getattr(part, "inline_data", None), "data", None)
             if data:
                 out_png.write_bytes(data)
+                if guide is not None:
+                    guide.unlink(missing_ok=True)
                 return True
+    if guide is not None:
+        guide.unlink(missing_ok=True)
     return False
+
+
+def refine_placement(before_png: Path, brand_name: str, brand_desc: str,
+                     opp: Opportunity, placement: PlacementBox, feedback: str = "",
+                     brand_image: Optional[str] = None) -> Path:
+    """Regenerate an image edit with a user-defined visual placement constraint."""
+    out_png = config.MEDIA_DIR / f"refined_{opp.id}_{uuid.uuid4().hex[:8]}.png"
+    if not _gemini_edit_image(
+        before_png, brand_name, brand_desc, opp, out_png, brand_image, placement, feedback
+    ):
+        raise RuntimeError("The image model returned no refined image.")
+    return out_png
 
 
 def _render_clip_from_image(image_png: Path, audio_src: Path, out_path: Path) -> None:
@@ -318,7 +409,7 @@ def _overlay_badge_image(before_png: Path, brand_name: str, product: str, out_pn
 # Orchestration per opportunity
 # ---------------------------------------------------------------------------
 def produce_image(src: Path, opp: Opportunity, brand_name: str, brand_desc: str,
-                  job_id: str) -> Result:
+                  job_id: str, brand_image: Optional[str] = None) -> Result:
     """IMAGE mode: keyframe before + AI-edited after (PNG)."""
     before_png = config.MEDIA_DIR / f"before_{opp.id}_{job_id}.png"
     after_png = config.MEDIA_DIR / f"after_{opp.id}_{uuid.uuid4().hex[:6]}.png"
@@ -326,7 +417,7 @@ def produce_image(src: Path, opp: Opportunity, brand_name: str, brand_desc: str,
     _extract_frame(src, before_png, at=mid)
 
     try:
-        if _gemini_edit_image(before_png, brand_name, brand_desc, opp, after_png):
+        if _gemini_edit_image(before_png, brand_name, brand_desc, opp, after_png, brand_image):
             return before_png, after_png, "image", "gemini-image", None
     except Exception as e:  # noqa: BLE001
         err = str(e)
@@ -343,7 +434,7 @@ def produce_image(src: Path, opp: Opportunity, brand_name: str, brand_desc: str,
 
 
 def produce_video(src: Path, opp: Opportunity, brand_name: str, brand_desc: str,
-                  job_id: str) -> Result:
+                  job_id: str, brand_image: Optional[str] = None) -> Result:
     """VIDEO mode: short before clip + Replicate-edited after clip (with fallbacks)."""
     end = opp.start_sec + min(config.VIDEO_CLIP_SECONDS, max(3, opp.end_sec - opp.start_sec))
     before = cut_clip(src, opp.start_sec, end, f"before_{opp.id}_{job_id}.mp4")
@@ -362,7 +453,7 @@ def produce_video(src: Path, opp: Opportunity, brand_name: str, brand_desc: str,
     frame = config.TMP_DIR / f"frame_{uuid.uuid4().hex[:6]}.png"
     try:
         _extract_frame(before, frame, at=_clip_duration(before) / 2)
-        if _gemini_edit_image(frame, brand_name, brand_desc, opp, edited):
+        if _gemini_edit_image(frame, brand_name, brand_desc, opp, edited, brand_image):
             _render_clip_from_image(edited, before, after)
             return before, after, "video", "gemini-image", "; ".join(errors) or None
     except Exception as e:  # noqa: BLE001
@@ -382,7 +473,7 @@ def produce_video(src: Path, opp: Opportunity, brand_name: str, brand_desc: str,
 
 
 def produce(src: Path, opp: Opportunity, brand_name: str, brand_desc: str,
-            job_id: str, output_mode: str) -> Result:
+            job_id: str, output_mode: str, brand_image: Optional[str] = None) -> Result:
     if output_mode == "image":
-        return produce_image(src, opp, brand_name, brand_desc, job_id)
-    return produce_video(src, opp, brand_name, brand_desc, job_id)
+        return produce_image(src, opp, brand_name, brand_desc, job_id, brand_image)
+    return produce_video(src, opp, brand_name, brand_desc, job_id, brand_image)

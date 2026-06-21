@@ -1,8 +1,9 @@
 """Wraps google-genai for video analysis (and shared client creation)."""
+import base64
 import json
 import re
 import uuid
-from typing import List
+from typing import List, Optional, Tuple
 
 from google import genai
 from google.genai import types
@@ -11,6 +12,21 @@ import config
 from models import Opportunity
 
 _client = None
+
+
+def decode_image(data: Optional[str]) -> Optional[Tuple[bytes, str]]:
+    """Decode a base64 image (raw or data: URL) into (bytes, mime). None if empty/bad."""
+    if not data:
+        return None
+    mime = "image/png"
+    try:
+        if data.startswith("data:"):
+            header, b64 = data.split(",", 1)
+            mime = header[5:].split(";")[0] or mime
+            data = b64
+        return base64.b64decode(data), mime
+    except Exception:
+        return None
 
 
 def get_client():
@@ -73,7 +89,8 @@ Respond with ONLY a JSON array (no markdown, no prose). Each element:
   "scene_summary": "<what is happening on screen>",
   "why_it_fits": "<why this brand fits naturally here>",
   "integration_idea": "<concretely how/where to place the product>",
-  "product_to_insert": "<the specific product object to insert>"
+  "product_to_insert": "<the specific product object to insert>",
+  "placement_confidence": <integer 0-100, confidence this product can be placed naturally>
 }}
 """
 
@@ -96,6 +113,10 @@ def _parse_opportunities(text: str, clip_seconds: int) -> List[Opportunity]:
             end_sec = start_sec + clip_seconds
         if end_sec <= start_sec:
             end_sec = start_sec + clip_seconds
+        try:
+            placement_confidence = round(float(item.get("placement_confidence", 75)))
+        except (TypeError, ValueError):
+            placement_confidence = 75
         opportunities.append(
             Opportunity(
                 id=uuid.uuid4().hex[:8],
@@ -105,18 +126,27 @@ def _parse_opportunities(text: str, clip_seconds: int) -> List[Opportunity]:
                 why_it_fits=item.get("why_it_fits", ""),
                 integration_idea=item.get("integration_idea", ""),
                 product_to_insert=item.get("product_to_insert", f"{item.get('product_to_insert','')}"),
+                placement_confidence=max(0, min(100, placement_confidence)),
             )
         )
     return opportunities
 
 
-def analyze_video(youtube_url: str, brand_name: str, brand_desc: str) -> List[Opportunity]:
+def analyze_video(youtube_url: str, brand_name: str, brand_desc: str,
+                  brand_image: Optional[str] = None) -> List[Opportunity]:
     """Send the YouTube URL to Gemini and return structured ad-integration opportunities."""
     client = get_client()
     video_part = types.Part.from_uri(file_uri=youtube_url, mime_type="video/mp4")
     prompt = _build_prompt(brand_name, brand_desc, config.CLIP_SECONDS)
 
-    contents = [types.Content(role="user", parts=[video_part, types.Part(text=prompt)])]
+    parts = [video_part]
+    ref = decode_image(brand_image)
+    if ref is not None:
+        parts.append(types.Part.from_bytes(data=ref[0], mime_type=ref[1]))
+        prompt += "\n\nA reference image of the brand's product is attached — use it to understand the product."
+    parts.append(types.Part(text=prompt))
+
+    contents = [types.Content(role="user", parts=parts)]
     cfg = types.GenerateContentConfig(
         temperature=1,
         top_p=0.95,

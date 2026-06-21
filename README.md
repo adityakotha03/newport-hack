@@ -62,8 +62,8 @@ npm run dev      # http://localhost:5173
 4. ffmpeg branded-badge overlay — deterministic safety net
 
 Enable the first two once you have proper credentials: set `ENABLE_OMNI=1` / `ENABLE_VEO=1`.
-See `backend/VEO_DEBUG_NOTES.md` for why a bare `AQ.` API key can't run Veo and how to fix it.
-
 ## Storage
 The downloaded source video is deleted after each job (try/finally). Only the final
 before/after clips are kept in `backend/media/`.
+
+Open the presentation at `/` and the live workspace at `/studio`.
